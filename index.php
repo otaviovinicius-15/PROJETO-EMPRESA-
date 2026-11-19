@@ -1,14 +1,12 @@
 <?php
-session_start();
 require_once __DIR__ . '/conexao.php';
+require_once __DIR__ . '/includes/auth.php';
+exigirLogin();
 require_once __DIR__ . '/includes/menu.php';
 
-$sql = "SELECT
-    (SELECT COUNT(*) FROM produto) AS produtos,
-    (SELECT COALESCE(SUM(quantidade_estoque), 0) FROM produto) AS itens,
-    (SELECT COUNT(*) FROM movimentacao) AS movimentacoes,
-    (SELECT COUNT(*) FROM movimentacao WHERE tipo = 'SAIDA') AS saidas";
-$totais = $pdo->query($sql)->fetch();
+$movimentacaoModel = new Movimentacao($pdo);
+$totais = $movimentacaoModel->totais();
+$movimentacoes = $movimentacaoModel->listar(null, 5);
 
 $cards = [
     ["🧴", "Produtos", $totais["produtos"], "produtos.php", "bg-senai-blue"],
@@ -25,6 +23,14 @@ $cards = [
         </div>
 
         <div class="p-6 flex-1">
+
+            <?php if (isset($_GET["negado"])): ?>
+                <div class="bg-red-50 border border-red-300 text-red-700 rounded-lg p-3 mb-5 flex items-center gap-2 text-sm">
+                    <span class="font-bold text-base">!</span>
+                    <span>Acesso negado: seu tipo de usuário não tem permissão para essa página.</span>
+                    <button onclick="this.parentElement.remove()" class="ml-auto text-red-400 hover:text-red-700 text-lg leading-none">×</button>
+                </div>
+            <?php endif; ?>
 
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <?php foreach ($cards as $c): ?>
@@ -53,16 +59,12 @@ $cards = [
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100">
-                    <?php
-                        $sql = "SELECT m.tipo, m.quantidade, m.datetime_movimentacao, p.nome
-                                FROM movimentacao m
-                                JOIN produto p ON p.id_produto = m.id_produto
-                                ORDER BY m.id_movimentacao DESC LIMIT 5";
-                        $movimentacoes = $pdo->query($sql)->fetchAll();
-                        foreach ($movimentacoes as $m):
-                    ?>
+                    <?php if (!$movimentacoes): ?>
+                        <tr><td colspan="4" class="px-4 py-6 text-center text-gray-400">Nenhuma movimentação encontrada!</td></tr>
+                    <?php endif; ?>
+                    <?php foreach ($movimentacoes as $m): ?>
                         <tr class="hover:bg-gray-50 transition">
-                            <td class="px-4 py-3 text-gray-700 font-semibold"><?= htmlspecialchars($m["nome"]) ?></td>
+                            <td class="px-4 py-3 text-gray-700 font-semibold"><?= htmlspecialchars($m["produto"]) ?></td>
                             <td class="px-4 py-3 text-center">
                                 <?php if ($m["tipo"] == "ENTRADA"): ?>
                                     <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-1 rounded">Entrada</span>

@@ -1,6 +1,9 @@
 <?php
-session_start();
 require_once __DIR__ . '/conexao.php';
+require_once __DIR__ . '/includes/auth.php';
+$usuario = exigirLogin(["ADMIN"]);
+
+$produtoModel = new Produto($pdo);
 
 $erro = "";
 
@@ -11,26 +14,23 @@ $data       = date("Y-m-d");
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
-    $nome       = trim($_POST["nome"] ?? "");       // ?? evita aviso se o campo não veio
-    $quantidade = trim($_POST["quantidade"] ?? "");
+    $nome       = trim($_POST["nome"] ?? "");       
     $valor      = trim($_POST["valor"] ?? "");
     $data       = trim($_POST["data"] ?? "");
 
     if ($nome === "" || $quantidade === "" || $valor === "" || $data === "") {
         $erro = "Preencha todos os campos!";
-    } elseif ((int) $quantidade < 0 || (float) $valor < 0) {
-        $erro = "Quantidade e valor não podem ser negativos.";
-    } else {
-        $st = $pdo->prepare("SELECT id_produto FROM produto WHERE nome = ?");
-        $st->execute([$nome]);
-        if ($st->fetch()) {
-            $erro = "Produto já cadastrado!";
-        }
+    } elseif (!ctype_digit($quantidade) || !is_numeric($valor) || (float) $valor < 0) {
+        $erro = "Quantidade deve ser um número inteiro e valor não pode ser negativo.";
+    } elseif (!DateTime::createFromFormat("Y-m-d", $data)) {
+        $erro = "Data inválida!";
+    } elseif ($produtoModel->buscarPorNome($nome)) {
+        $erro = "Produto já cadastrado!";
     }
 
     if ($erro === "") {
-        $st = $pdo->prepare("INSERT INTO produto (nome, quantidade_estoque, valor_unitario, data_cadastro) VALUES (?, ?, ?, ?)");
-        $st->execute([$nome, (int) $quantidade, (float) $valor, $data]);
+        
+        $produtoModel->cadastrar($nome, (int) $quantidade, (float) $valor, $data, $usuario["id_user"]);
 
         header("Location: produtos.php?salvo=1");     // redireciona após gravar
         exit;

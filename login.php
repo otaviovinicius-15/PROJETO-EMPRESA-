@@ -23,7 +23,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if (!$user) {
             $erro = "E-mail ou senha inválidos!";
         } else {
-            session_regenerate_id(true);       // evita fixação de sessão
+            session_regenerate_id(true);       
             $_SESSION["usuario"] = [
                 "id_user" => (int) $user["id_user"],
                 "nome"    => $user["nome"],

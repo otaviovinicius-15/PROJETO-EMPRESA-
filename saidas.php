@@ -1,15 +1,10 @@
 <?php
-session_start();
 require_once __DIR__ . '/conexao.php';
+require_once __DIR__ . '/includes/auth.php';
+exigirLogin();
 require_once __DIR__ . '/includes/menu.php';
 
-$sql = "SELECT m.quantidade, m.datetime_movimentacao, p.nome AS produto, u.nome AS usuario
-        FROM movimentacao m
-        JOIN produto p ON p.id_produto = m.id_produto
-        LEFT JOIN `user` u ON u.id_user = m.id_user
-        WHERE m.tipo = 'SAIDA'
-        ORDER BY m.id_movimentacao DESC";
-$saidas = $pdo->query($sql)->fetchAll();
+$saidas = (new Movimentacao($pdo))->listar("SAIDA");
 ?>
     <main class="flex-1 flex flex-col">
 

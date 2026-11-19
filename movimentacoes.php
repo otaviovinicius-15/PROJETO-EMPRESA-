@@ -1,17 +1,20 @@
 <?php
-session_start();
 require_once __DIR__ . '/conexao.php';
+require_once __DIR__ . '/includes/auth.php';
+exigirLogin();
+
+$movimentacaoModel = new Movimentacao($pdo);
 
 $sucesso = "";
 $erro = "";
 
-if (isset($_GET["excluir"])) {
-    $st = $pdo->prepare("DELETE FROM movimentacao WHERE id_movimentacao = ?");
-    $st->execute([$_GET["excluir"]]);
-    if ($st->rowCount() > 0) {
-        $sucesso = "Movimentação removida com sucesso!";
-    } else {
-        $erro = "Não foi possível encontrar a movimentação!";
+if (isset($_GET["excluir"]) && !ehAdmin()) {
+    $erro = "Somente administradores podem excluir movimentações.";
+} elseif (isset($_GET["excluir"])) {
+    
+    $erro = $movimentacaoModel->excluir((int) $_GET["excluir"]);
+    if ($erro === "") {
+        $sucesso = "Movimentação removida com sucesso! Estoque ajustado.";
     }
 }
 if (isset($_GET["salvo"])) {
@@ -20,12 +23,7 @@ if (isset($_GET["salvo"])) {
 
 require_once __DIR__ . '/includes/menu.php';
 
-$sql = "SELECT m.*, p.nome AS produto, u.nome AS usuario
-        FROM movimentacao m
-        JOIN produto p ON p.id_produto = m.id_produto
-        LEFT JOIN `user` u ON u.id_user = m.id_user
-        ORDER BY m.id_movimentacao DESC";
-$movimentacoes = $pdo->query($sql)->fetchAll();
+$movimentacoes = $movimentacaoModel->listar();
 ?>
     <main class="flex-1 flex flex-col">
 
@@ -64,7 +62,7 @@ $movimentacoes = $pdo->query($sql)->fetchAll();
                             <th class="px-4 py-3 text-left">Produto</th>
                             <th class="px-4 py-3 text-center">Tipo</th>
                             <th class="px-4 py-3 text-center">Quantidade</th>
-                            <th class="px-4 py-3 text-center">Data</th>
+                            <th class="px-4 py-3 text-center">Data/hora</th>
                             <th class="px-4 py-3 text-center">Usuário</th>
                             <th class="px-4 py-3 text-center">Ações</th>
                         </tr>
@@ -86,11 +84,15 @@ $movimentacoes = $pdo->query($sql)->fetchAll();
                                 <?php endif; ?>
                             </td>
                             <td class="px-4 py-3 text-center text-gray-600"><?= $m["quantidade"] ?></td>
-                            <td class="px-4 py-3 text-center text-gray-600"><?= date("d/m/Y H:i", strtotime($m["datetime_movimentacao"])) ?></td>
+                            <td class="px-4 py-3 text-center text-gray-600"><?= date("d/m/Y H:i:s", strtotime($m["datetime_movimentacao"])) ?></td>
                             <td class="px-4 py-3 text-center text-gray-600"><?= htmlspecialchars($m["usuario"] ?? "-") ?></td>
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
+                                    <?php if (ehAdmin()): ?>
                                     <a onclick="return confirm('Tem certeza disso?')" class="bg-senai-red text-white text-xs px-2.5 py-1.5 rounded-md hover:bg-red-700 transition" href="?excluir=<?= $m["id_movimentacao"] ?>">Excluir</a>
+                                    <?php else: ?>
+                                    <span class="text-xs text-gray-400">-</span>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>

@@ -1,15 +1,10 @@
 <?php
-// ============================================
-// Arquivo: conexao.php
-// Função: Conectar o PHP ao banco de dados MySQL usando PDO
-// ============================================
 
 // Dados de conexão com o banco
 $host  = 'localhost';
 $banco = 'empresa';
 $user  = 'root';
-$senha = '';                     // no WampServer o root vem sem senha
-
+$senha = '';                     
 try {
     $pdo = new PDO(
         "mysql:host=$host;dbname=$banco;charset=utf8mb4",
@@ -23,3 +18,11 @@ try {
 } catch (PDOException $e) {
     exit('Falha na conexão: ' . $e->getMessage());
 }
+
+
+spl_autoload_register(function ($classe) {
+    $arquivo = __DIR__ . '/models/' . $classe . '.php';
+    if (file_exists($arquivo)) {
+        require_once $arquivo;
+    }
+});
